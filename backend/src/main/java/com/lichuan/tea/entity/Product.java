@@ -1,27 +1,29 @@
 package com.lichuan.tea.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
-@Entity
-@Table(name = "products")
+@TableName("products")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Product {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
-
     private String name;
-    
-    @Column(columnDefinition = "TEXT")
     private String description;
-    
     private BigDecimal price;
     private Integer stock;
-    private String coverImg;
-    private String category; // 冷后浑, 玛瑙红
-    
-    private String origin; // 产地
-    private String farmerName; // 农户
+    private String image;
+    private String origin;
+    private Integer sales;
+    private Long farmerId;
+    private String auditStatus;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

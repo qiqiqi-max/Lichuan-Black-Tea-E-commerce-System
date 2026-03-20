@@ -1,25 +1,25 @@
 package com.lichuan.tea.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
-@Entity
-@Table(name = "users")
+@TableName("users")
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
-
-    @Column(unique = true, nullable = false)
     private String username;
-
-    @Column(nullable = false)
     private String password;
-
-    @Column(nullable = false)
-    private String role; // USER, ADMIN
-
-    private String nickname;
+    private String email;
     private String phone;
+    private String address;
+    private String avatar;
+    private String role;
+    private Integer status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

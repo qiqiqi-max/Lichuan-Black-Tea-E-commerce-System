@@ -12,13 +12,15 @@
 - **框架**: Vue 3 (Composition API, Script Setup)
 - **构建工具**: Vite
 - **UI 组件库**: Element Plus
+- **数据可视化**: ECharts (用于后台仪表盘)
 - **状态管理**: Pinia (用于购物车、用户信息)
+- **资源管理**: 本地静态资源 (/public/images/)，拒绝外部 CDN 依赖
 - **路由**: Vue Router 4
 - **HTTP 客户端**: Axios
 - **样式**: SCSS / CSS
 
 ### 2.2 后端 (Backend)
-- **核心框架**: Spring Boot 3.x
+- **核心框架**: Spring Boot 2.7.x
 - **ORM**: Spring Data JPA
 - **数据库**: H2 Database (In-Memory, 配置 MySQL Dialect)
 - **工具库**: Lombok (简化样板代码)
@@ -51,6 +53,7 @@
 | description | TEXT | 商品详情 |
 | price | DECIMAL | 价格 |
 | stock | INT | 库存 |
+| sales | INT | **销量** (实时更新) |
 | cover_img | VARCHAR | 封面图 URL |
 | category | VARCHAR | 分类 (冷后浑, 玛瑙红) |
 | origin | VARCHAR | **产地** (核心字段, 如: 毛坝镇) |
@@ -63,8 +66,11 @@
 | order_no | VARCHAR | 订单号 (UUID) |
 | user_id | BIGINT | FK -> User.id |
 | total_amount | DECIMAL | 订单总金额 |
-| status | VARCHAR | WAIT_PAY, WAIT_SHIP, SHIPPED, DONE |
+| status | VARCHAR | WAIT_PAY, PAID, SHIPPED, DONE, CANCELLED |
 | address | VARCHAR | 收货地址 |
+| receiver_name | VARCHAR | 收货人姓名 |
+| receiver_phone | VARCHAR | 收货人电话 |
+| remark | VARCHAR | 订单备注 |
 | create_time | DATETIME | 下单时间 |
 
 #### OrderItem (订单明细表)
@@ -73,7 +79,7 @@
 | id | BIGINT | PK, Auto Inc |
 | order_id | BIGINT | FK -> Order.id |
 | product_id | BIGINT | FK -> Product.id |
-| product_name | VARCHAR | 冗余商品名 (快照) |
+| product_name | VARCHAR | 冗余商品名 (含规格) |
 | price | DECIMAL | 购买时单价 |
 | quantity | INT | 购买数量 |
 
@@ -86,24 +92,42 @@
 ### 4.2 Product
 - `GET /api/products`: 获取商品列表 (参数: page, size, search)
 - `GET /api/products/{id}`: 获取详情
-- `POST /api/admin/products`: 新增商品 (Admin)
-- `PUT /api/admin/products/{id}`: 更新商品 (Admin)
-- `DELETE /api/admin/products/{id}`: 删除商品 (Admin)
+- `POST /api/products`: 新增商品 (Admin)
+- `PUT /api/products/{id}`: 更新商品 (Admin)
+- `DELETE /api/products/{id}`: 删除商品 (Admin)
 
 ### 4.3 Order
 - `POST /api/orders`: 创建订单
+- `POST /api/orders/{id}/pay`: 支付订单 (模拟支付，更新状态为 PAID)
 - `GET /api/orders/my`: 获取当前用户订单
 - `GET /api/admin/orders`: 获取所有订单 (Admin)
 - `PUT /api/admin/orders/{id}/ship`: 发货 (Admin)
+- `PUT /api/admin/orders/{id}`: 编辑订单信息 (Admin)
+
+### 4.4 Dashboard (Admin)
+- `GET /api/admin/dashboard/stats`: 获取仪表盘统计数据（今日订单、销量、趋势图等）
+
+### 4.5 User (Admin)
+- `GET /api/admin/users`: 获取用户列表
+- `POST /api/admin/users`: 新增用户
+- `PUT /api/admin/users/{id}`: 更新用户
+- `DELETE /api/admin/users/{id}`: 删除用户
+
+### 4.6 Cart
+- `POST /api/cart/add`: 添加商品到购物车
+- `POST /api/cart/remove`: 移除购物车商品 (通过 Body 传递 productName)
+- `GET /api/cart`: 获取购物车列表
+- `DELETE /api/cart/clear`: 清空购物车
 
 ## 5. 项目目录结构规范
 ```
 backend/
   src/main/java/com/lichuan/tea/
-    controller/
+    controller/  (AuthController, ProductController, OrderController, DashboardController, UserController, CartController)
     entity/
     repository/
     service/
+    dto/         (DashboardStatsDTO, CartItemDTO, RegisterRequest)
     config/      (Cors, WebMvc)
     common/      (Result, Exception)
 frontend/
@@ -114,6 +138,6 @@ frontend/
     router/
     stores/
     views/
-      admin/
+      admin/     (Dashboard, ProductManage, OrderManage, UserManage, AdminLayout)
       Layout.vue
 ```

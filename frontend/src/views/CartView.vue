@@ -7,7 +7,7 @@
       <el-table-column prop="quantity" label="数量" />
       <el-table-column label="操作">
         <template #default="scope">
-          <el-button type="danger" link @click="cartStore.removeFromCart(scope.row.id)">移除</el-button>
+          <el-button type="danger" link @click="handleRemove(scope.row)">移除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -19,6 +19,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useCartStore } from '../stores/cart'
 import { useUserStore } from '../stores/user'
 import { useRouter } from 'vue-router'
@@ -28,6 +29,46 @@ import { ElMessage } from 'element-plus'
 const cartStore = useCartStore()
 const userStore = useUserStore()
 const router = useRouter()
+
+onMounted(async () => {
+  if (userStore.token && userStore.user) {
+    try {
+      const res = await api.get(`/cart?userId=${userStore.user.username}`)
+      // Sync backend cart to local store
+      // We should probably clear local and replace, or merge.
+      // For simplicity, let's replace.
+      cartStore.clearCart()
+      res.forEach(item => {
+        // Backend returns CartItemDTO.
+        // We need to map it to store format.
+        // Store expects: { id, name, price, coverImg, quantity }
+        cartStore.addToCart({
+            id: item.productId,
+            name: item.productName,
+            price: item.price,
+            coverImg: item.coverImg
+        }, item.quantity)
+      })
+    } catch (e) {
+      console.error('Failed to sync cart', e)
+    }
+  }
+})
+
+const handleRemove = async (item) => {
+    try {
+        if (userStore.user) {
+             // Use POST with body to avoid URL encoding issues with special chars in product name
+             await api.post(`/cart/remove?userId=${userStore.user.username}`, {
+                 productName: item.name
+             })
+        }
+        cartStore.removeFromCart(item.name)
+        ElMessage.success('已移除')
+    } catch (e) {
+        ElMessage.error('移除失败')
+    }
+}
 
 const checkout = async () => {
   if (!userStore.token) {

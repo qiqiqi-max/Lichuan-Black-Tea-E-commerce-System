@@ -1,30 +1,21 @@
 package com.lichuan.tea.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
-@Entity
-@Table(name = "orders")
+@TableName("orders")
 public class Order {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
-
-    private String orderNo;
     private Long userId;
     private BigDecimal totalAmount;
-    private String status; // WAIT_PAY, WAIT_SHIP, SHIPPED, DONE
-    private String address;
-    
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createTime;
-
-    @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "order_id")
-    private List<OrderItem> items;
+    private String status;
+    private String shippingAddress;
+    private LocalDateTime createdAt;
 }

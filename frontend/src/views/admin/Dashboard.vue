@@ -1,94 +1,284 @@
 <template>
-  <div class="admin-container">
-    <el-tabs>
-      <el-tab-pane label="商品管理">
-        <el-button type="primary" @click="showAddProduct = true">新增商品</el-button>
-        <el-table :data="products" style="width: 100%; margin-top: 20px">
-          <el-table-column prop="id" label="ID" width="50" />
-          <el-table-column prop="name" label="名称" />
-          <el-table-column prop="price" label="价格" />
-          <el-table-column prop="origin" label="产地" />
-          <el-table-column prop="farmerName" label="农户" />
-          <el-table-column label="操作">
-            <template #default="{ row }">
-              <el-button type="danger" size="small" @click="deleteProduct(row.id)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-tab-pane>
-      
-      <el-tab-pane label="订单管理">
-        <el-table :data="orders" style="width: 100%">
-          <el-table-column prop="orderNo" label="订单号" />
-          <el-table-column prop="totalAmount" label="金额" />
-          <el-table-column prop="status" label="状态" />
-          <el-table-column label="操作">
-            <template #default="{ row }">
-              <el-button v-if="row.status === 'WAIT_SHIP'" type="success" size="small" @click="shipOrder(row.id)">发货</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-tab-pane>
-    </el-tabs>
+  <div class="dashboard-container" v-loading="loading">
+    <!-- Stat Cards -->
+    <el-row :gutter="20" class="mb-4">
+      <el-col :span="6" v-for="item in stats" :key="item.title">
+        <el-card shadow="hover" class="stat-card clickable-card" @click="handleStatClick(item)">
+          <div class="stat-icon" :style="{ backgroundColor: item.color }">
+            <el-icon><component :is="item.icon" /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-title">{{ item.title }}</div>
+            <div class="stat-value">{{ item.value }}</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- Add Product Dialog -->
-    <el-dialog v-model="showAddProduct" title="新增商品">
-      <el-form :model="newProduct" label-width="80px">
-        <el-form-item label="名称"><el-input v-model="newProduct.name" /></el-form-item>
-        <el-form-item label="价格"><el-input v-model="newProduct.price" /></el-form-item>
-        <el-form-item label="产地"><el-input v-model="newProduct.origin" /></el-form-item>
-        <el-form-item label="农户"><el-input v-model="newProduct.farmerName" /></el-form-item>
-        <el-form-item label="分类"><el-input v-model="newProduct.category" /></el-form-item>
-        <el-form-item label="图片"><el-input v-model="newProduct.coverImg" /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showAddProduct = false">取消</el-button>
-        <el-button type="primary" @click="createProduct">保存</el-button>
+    <!-- Chart -->
+    <el-row :gutter="20" class="mb-4">
+      <el-col :span="24">
+        <el-card shadow="hover" class="clickable-card" @click="router.push('/admin/orders')">
+          <template #header>
+            <div class="card-header">
+              <div>
+                <span class="chart-title">近7天销量趋势</span>
+                <span class="chart-subtitle">每日销售额统计 (点击查看详情)</span>
+              </div>
+            </div>
+          </template>
+          <div ref="chartRef" style="width: 100%; height: 500px;"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- Recent Orders -->
+    <el-card shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span>最近订单</span>
+          <el-button text @click="router.push('/admin/orders')">查看全部</el-button>
+        </div>
       </template>
-    </el-dialog>
+      <el-table :data="recentOrders" stripe style="width: 100%" @row-click="router.push('/admin/orders')">
+        <el-table-column prop="orderNo" label="订单号" width="180" />
+        <el-table-column prop="user" label="用户" width="120" />
+        <el-table-column prop="totalAmount" label="金额">
+          <template #default="{ row }">¥{{ row.totalAmount }}</template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="时间" />
+        <el-table-column prop="status" label="状态">
+          <template #default="{ row }">
+            <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '../../api'
 import { ElMessage } from 'element-plus'
+import * as echarts from 'echarts'
+import { ShoppingCart, Money, User, Box } from '@element-plus/icons-vue'
 
-const products = ref([])
-const orders = ref([])
-const showAddProduct = ref(false)
-const newProduct = ref({ name: '', price: 0, origin: '', farmerName: '', category: '', coverImg: 'https://placehold.co/400x400' })
+const router = useRouter()
+const chartRef = ref(null)
+let chartInstance = null
+const loading = ref(false)
 
-const loadData = async () => {
-  products.value = await api.get('/products')
-  orders.value = await api.get('/admin/orders')
+const stats = ref([
+  { title: '今日订单', value: '0', icon: 'ShoppingCart', color: '#409EFF', path: '/admin/orders' },
+  { title: '总销售额', value: '¥ 0.00', icon: 'Money', color: '#67C23A', path: '/admin/orders' },
+  { title: '总用户数', value: '0', icon: 'User', color: '#E6A23C', path: '/admin/users' },
+  { title: '待发货', value: '0', icon: 'Box', color: '#F56C6C', path: '/admin/orders', query: { status: 'WAIT_SHIP' } }
+])
+
+const recentOrders = ref([])
+let chartData = { dates: [], sales: [] }
+
+const handleStatClick = (item) => {
+  if (item.query) {
+    router.push({ path: item.path, query: item.query })
+  } else {
+    router.push(item.path)
+  }
 }
 
-onMounted(loadData)
-
-const createProduct = async () => {
-  await api.post('/admin/products', newProduct.value)
-  ElMessage.success('添加成功')
-  showAddProduct.value = false
-  loadData()
+const statusType = (status) => {
+  const map = { WAIT_PAY: 'info', WAIT_SHIP: 'danger', SHIPPED: 'primary', COMPLETED: 'success', CANCELLED: 'info' }
+  return map[status] || 'info'
 }
 
-const deleteProduct = async (id) => {
-  await api.delete(`/admin/products/${id}`)
-  ElMessage.success('删除成功')
-  loadData()
+const statusText = (status) => {
+  const map = { WAIT_PAY: '待付款', WAIT_SHIP: '待发货', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
+  return map[status] || status
 }
 
-const shipOrder = async (id) => {
-  await api.put(`/admin/orders/${id}/ship`)
-  ElMessage.success('已发货')
-  loadData()
+const fetchStats = async () => {
+  loading.value = true
+  try {
+    const res = await api.get('/admin/dashboard/stats')
+    // Update Stats
+    stats.value[0].value = res.todayOrders.toString()
+    stats.value[1].value = `¥ ${res.totalSales.toFixed(2)}`
+    stats.value[2].value = res.totalUsers.toString()
+    stats.value[3].value = res.pendingOrders.toString()
+    
+    // Update Recent Orders
+    recentOrders.value = res.recentOrders
+    
+    // Update Chart Data
+    chartData.dates = res.last7DaysSales.map(item => item.date)
+    chartData.sales = res.last7DaysSales.map(item => item.sales)
+    
+    // Refresh Chart
+    initChart()
+  } catch (e) {
+    ElMessage.error('获取统计数据失败')
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  await nextTick()
+  await fetchStats() // Fetch data first
+  window.addEventListener('resize', resizeChart)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeChart)
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+})
+
+const initChart = () => {
+  if (!chartRef.value) return
+  
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+
+  chartInstance = echarts.init(chartRef.value)
+  
+  const dates = chartData.dates
+  const sales = chartData.sales
+
+  if (!sales || sales.length === 0 || sales.every(v => v === 0)) {
+    chartInstance.setOption({
+      title: {
+        text: '暂无销售数据',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: '#999' }
+      }
+    })
+    return
+  }
+
+  const option = {
+    tooltip: { 
+      trigger: 'axis',
+      formatter: '{b}<br/>销售额: <span style="color:#8B4513;font-weight:bold">¥{c}</span>'
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: dates,
+      axisLine: { lineStyle: { color: '#999' } }
+    },
+    yAxis: { 
+      type: 'value',
+      axisLabel: { formatter: '¥{value}' },
+      splitLine: { lineStyle: { type: 'dashed' } }
+    },
+    series: [
+      {
+        name: '销售额',
+        type: 'line',
+        stack: 'Total',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 4, color: '#8B4513' },
+        itemStyle: { color: '#8B4513', borderColor: '#fff', borderWidth: 2 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(139, 69, 19, 0.5)' },
+            { offset: 1, color: 'rgba(139, 69, 19, 0.05)' }
+          ])
+        },
+        data: sales
+      }
+    ]
+  }
+  chartInstance.setOption(option)
+}
+
+const resizeChart = () => {
+  chartInstance?.resize()
 }
 </script>
 
 <style scoped>
-.admin-container {
-  padding: 20px;
-  background: #fff;
+.chart-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #8B4513;
+  margin-right: 10px;
+}
+.chart-subtitle {
+  font-size: 12px;
+  color: #999;
+}
+.dashboard-container {
+  /* padding is handled by layout */
+}
+
+.mb-4 { margin-bottom: 20px; }
+
+.clickable-card {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clickable-card:hover {
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.15);
+  transform: translateY(-4px);
+  border-color: #8B4513;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+}
+
+:deep(.el-card__body) {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  margin-right: 15px;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

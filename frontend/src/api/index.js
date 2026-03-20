@@ -8,18 +8,25 @@ const api = axios.create({
 
 api.interceptors.response.use(
   response => {
-    const res = response.data
-    if (res.code === 200) {
-      return res.data
+    const res = response.data;
+    // Assuming backend returns { code, data, message }
+    if (res.code === 200 || response.status === 200) {
+      return res.data; // For successful biz logic
     } else {
-      ElMessage.error(res.msg || 'Error')
-      return Promise.reject(new Error(res.msg || 'Error'))
+      if (!response.config.skipErrorMessage) {
+        ElMessage.error(res.message || '操作失败');
+      }
+      return Promise.reject(new Error(res.message || 'Error'));
     }
   },
   error => {
-    ElMessage.error(error.message)
-    return Promise.reject(error)
+    if (error.response && error.response.data && error.response.data.message) {
+      ElMessage.error(error.response.data.message);
+      return Promise.reject(new Error(error.response.data.message));
+    }
+    ElMessage.error(error.message || '网络错误');
+    return Promise.reject(error);
   }
-)
+);
 
 export default api
