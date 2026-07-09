@@ -1,4 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '../stores/user'
 import Layout from '../views/Layout.vue'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
@@ -11,14 +12,19 @@ const router = createRouter({
       component: Layout,
       children: [
         { path: '', component: HomeView },
-        { 
-          path: 'product/:id', 
+        {
+          path: 'product/:id',
           name: 'ProductDetail',
-          component: () => import('../views/ProductDetail.vue') 
+          component: () => import('../views/ProductDetail.vue')
+        },
+        {
+          path: 'farmer-story/:id',
+          name: 'FarmerStoryDetail',
+          component: () => import('../views/FarmerStoryDetail.vue')
         },
         { path: 'cart', component: () => import('../views/CartView.vue') },
         { path: 'search', component: () => import('../views/SearchView.vue') },
-        { path: 'orders', component: () => import('../views/OrderView.vue') } // Added OrderView
+        { path: 'orders', component: () => import('../views/OrderView.vue') }
       ]
     },
     {
@@ -30,41 +36,9 @@ const router = createRouter({
       component: () => import('../views/RegisterView.vue')
     },
     {
-      path: '/farmer',
-      component: () => import('../views/farmer/FarmerLayout.vue'),
-      meta: { requiresAuth: true, role: 'FARMER' },
-      children: [
-        { path: '', redirect: '/farmer/dashboard' },
-        {
-          path: 'dashboard',
-          name: 'FarmerDashboard',
-          component: () => import('../views/farmer/Dashboard.vue'),
-          meta: { title: '农户仪表盘' }
-        },
-        {
-          path: 'products',
-          name: 'FarmerProductManage',
-          component: () => import('../views/farmer/ProductManage.vue'),
-          meta: { title: '商品管理' }
-        },
-        {
-          path: 'orders',
-          name: 'FarmerOrderManage',
-          component: () => import('../views/farmer/OrderManage.vue'),
-          meta: { title: '订单管理' }
-        },
-        {
-          path: 'profile',
-          name: 'FarmerProfile',
-          component: () => import('../views/farmer/Profile.vue'),
-          meta: { title: '个人资料' }
-        }
-      ]
-    },
-    {
       path: '/admin',
       component: () => import('../views/admin/AdminLayout.vue'),
-      meta: { requiresAuth: true, role: 'ADMIN' },
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -89,14 +63,63 @@ const router = createRouter({
           meta: { title: '订单管理' }
         },
         {
+          path: 'after-sales',
+          name: 'AfterSaleManage',
+          component: () => import('../views/admin/AfterSaleManage.vue'),
+          meta: { title: '售后管理' }
+        },
+        {
+          path: 'special-recommendations',
+          name: 'SpecialRecommendManage',
+          component: () => import('../views/admin/SpecialRecommendManage.vue'),
+          meta: { title: '特别推荐管理', requiresRole: 'ADMIN' }
+        },
+        {
+          path: 'flash-sales',
+          name: 'FlashSaleManage',
+          component: () => import('../views/admin/FlashSaleManage.vue'),
+          meta: { title: '限时特价秒杀', requiresRole: 'ADMIN' }
+        },
+        {
+          path: 'farmer-stories',
+          name: 'FarmerStoryManage',
+          component: () => import('../views/admin/FarmerStoryManage.vue'),
+          meta: { title: '茶农故事管理', requiresRole: 'ADMIN' }
+        },
+        {
           path: 'users',
           name: 'UserManage',
           component: () => import('../views/admin/UserManage.vue'),
-          meta: { title: '用户管理' }
+          meta: { title: '用户管理', requiresRole: 'ADMIN' }
         }
       ]
     }
   ]
+})
+
+router.beforeEach((to, from, next) => {
+  const userStore = useUserStore()
+  const isAuthenticated = !!userStore.token
+  const userRole = userStore.role
+
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    if (!isAuthenticated) {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+    } else {
+      const requiredRole = to.matched.find((record) => record.meta.requiresRole)?.meta.requiresRole
+      if (requiredRole && userRole !== requiredRole) {
+        if (to.path !== '/admin/dashboard') {
+          next('/admin/dashboard')
+        } else {
+          next()
+        }
+      } else {
+        next()
+      }
+    }
+  } else {
+    next()
+  }
 })
 
 export default router

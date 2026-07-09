@@ -1,7 +1,6 @@
-<template>
+﻿<template>
   <header class="app-header" :class="{ 'is-scrolled': isScrolled }">
     <div class="header-container">
-      <!-- Left: Brand Logo -->
       <div class="brand" @click="$router.push('/')">
         <svg class="brand-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#8B4513" stroke-width="2">
           <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
@@ -12,9 +11,7 @@
         <h1 class="brand-name">利川红茶助农平台</h1>
       </div>
 
-      <!-- Right: Navigation & Actions -->
       <nav class="nav-actions">
-        <!-- Search Bar -->
         <div class="search-bar">
           <el-input
             v-model="searchKeyword"
@@ -30,7 +27,7 @@
         </div>
 
         <router-link to="/" class="nav-link" active-class="active">首页</router-link>
-        
+
         <div class="nav-item cart-item" @click="$router.push('/cart')">
           <div class="icon-wrapper">
             <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
@@ -45,17 +42,22 @@
 
         <template v-if="userStore.token">
           <router-link to="/orders" class="nav-link" active-class="active">我的订单</router-link>
-          
+
           <el-dropdown trigger="hover" class="user-dropdown">
             <div class="user-profile">
               <el-avatar :size="36" :src="userStore.user.avatar || '/images/common/头像.jpg'" />
-              <span class="username">{{ userStore.user.nickname || userStore.user.username }}</span>
+              <span class="username">{{ userStore.user.username || userStore.user.nickname }}</span>
               <el-icon><CaretBottom /></el-icon>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="$router.push('/orders')">我的订单</el-dropdown-item>
-                <el-dropdown-item v-if="userStore.user.role === 'ADMIN'" @click="$router.push('/admin')">后台管理</el-dropdown-item>
+                <el-dropdown-item
+                  v-if="userStore.user.role === 'ADMIN' || userStore.user.role === 'FARMER'"
+                  @click="$router.push('/admin')"
+                >
+                  {{ userStore.user.role === 'ADMIN' ? '进入总后台' : '进入茶园工作台' }}
+                </el-dropdown-item>
                 <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -70,7 +72,6 @@
         </template>
       </nav>
 
-      <!-- Mobile Menu Toggle (Hidden on Desktop) -->
       <div class="mobile-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
           <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -80,13 +81,12 @@
       </div>
     </div>
 
-    <!-- Mobile Drawer -->
     <el-drawer v-model="mobileMenuOpen" direction="rtl" size="70%" :with-header="false">
       <div class="mobile-menu">
         <div class="mobile-brand">利川红茶</div>
         <router-link to="/" class="mobile-link" @click="mobileMenuOpen = false">首页</router-link>
         <router-link to="/cart" class="mobile-link" @click="mobileMenuOpen = false">
-          购物车 <span v-if="cartStore.totalCount">({{ cartStore.totalCount }})</span>
+          购物车<span v-if="cartStore.totalCount">（{{ cartStore.totalCount }}）</span>
         </router-link>
         <template v-if="userStore.token">
           <router-link to="/orders" class="mobile-link" @click="mobileMenuOpen = false">我的订单</router-link>
@@ -99,7 +99,6 @@
       </div>
     </el-drawer>
   </header>
-  <!-- Spacer to prevent content overlap -->
   <div class="header-spacer"></div>
 </template>
 
@@ -136,6 +135,7 @@ onUnmounted(() => {
 })
 
 const logout = () => {
+  cartStore.clearCart()
   userStore.logout()
   ElMessage.success('退出成功')
   router.push('/login')
@@ -143,7 +143,6 @@ const logout = () => {
 </script>
 
 <style scoped>
-/* Header Styles */
 .app-header {
   position: fixed;
   top: 0;
@@ -172,25 +171,22 @@ const logout = () => {
   padding: 0 20px;
 }
 
-/* Brand */
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  text-decoration: none;
 }
 
 .brand-name {
-  font-family: "Noto Serif SC", serif; /* Elegant font */
+  font-family: "Noto Serif SC", serif;
   font-size: 22px;
   font-weight: 700;
-  color: #8B4513; /* Russet */
+  color: #8B4513;
   margin: 0;
   white-space: nowrap;
 }
 
-/* Search Bar */
 .search-bar {
   margin-right: 20px;
 }
@@ -210,7 +206,6 @@ const logout = () => {
   background-color: #A0522D !important;
 }
 
-/* Navigation */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -225,7 +220,8 @@ const logout = () => {
   transition: color 0.3s;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
   color: #8B4513;
 }
 
@@ -262,7 +258,6 @@ const logout = () => {
   padding: 0 4px;
 }
 
-/* User Profile */
 .user-profile {
   display: flex;
   align-items: center;
@@ -286,7 +281,6 @@ const logout = () => {
   white-space: nowrap;
 }
 
-/* Auth Buttons */
 .auth-buttons {
   display: flex;
   align-items: center;
@@ -294,7 +288,7 @@ const logout = () => {
 }
 
 .login-btn {
-  background: #8B4513; /* Match theme */
+  background: #8B4513;
   border-color: #8B4513;
   border-radius: 20px;
   padding: 8px 24px;
@@ -316,37 +310,39 @@ const logout = () => {
   color: #8B4513;
 }
 
-/* Mobile Toggle */
 .mobile-toggle {
   display: none;
   cursor: pointer;
   color: #333;
 }
 
-/* Spacer */
 .header-spacer {
-  height: 70px; /* Matches header height */
+  height: 70px;
 }
 
-/* Mobile Responsive */
 @media (max-width: 768px) {
-  .nav-actions { display: none; }
-  .mobile-toggle { display: block; }
-  
+  .nav-actions {
+    display: none;
+  }
+
+  .mobile-toggle {
+    display: block;
+  }
+
   .mobile-menu {
     display: flex;
     flex-direction: column;
     gap: 20px;
     padding: 20px;
   }
-  
+
   .mobile-brand {
     font-size: 20px;
     font-weight: bold;
     color: #8B4513;
     margin-bottom: 20px;
   }
-  
+
   .mobile-link {
     font-size: 16px;
     color: #333;
@@ -354,7 +350,9 @@ const logout = () => {
     padding: 10px 0;
     border-bottom: 1px solid #eee;
   }
-  
-  .logout { color: #c0392b; }
+
+  .logout {
+    color: #c0392b;
+  }
 }
 </style>

@@ -21,10 +21,9 @@ public class CartController {
         return Result.success("Added to cart");
     }
 
-    @PostMapping("/remove")
-    public Result<String> removeFromCart(@RequestBody CartItemDTO item, @RequestParam String userId) {
-        // item.getProductName() should contain the key
-        cartService.removeFromCart(userId, item.getProductName());
+    @DeleteMapping("/remove")
+    public Result<String> removeFromCart(@RequestParam String userId, @RequestParam Long productId, @RequestParam String spec) {
+        cartService.removeFromCart(userId, productId, spec);
         return Result.success("Removed from cart");
     }
 

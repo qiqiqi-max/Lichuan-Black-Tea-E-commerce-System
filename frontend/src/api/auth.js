@@ -1,9 +1,9 @@
 import api from './index'
 
-export const register = (data) => {
-  return api.post('/auth/register', data)
+export const login = (data) => {
+  return api.post('/login', data)
 }
 
-export const login = (data) => {
-  return api.post('/auth/login', data)
+export const register = (data) => {
+  return api.post('/register', data)
 }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="login-container">
     <div class="login-overlay"></div>
     <div class="login-content">
@@ -7,55 +7,40 @@
           <h2>加入我们 · 品鉴利川红茶</h2>
           <p class="subtitle">源自高山 · 匠心制作 · 助农增收</p>
         </div>
-        
+
         <el-form :model="form" :rules="rules" ref="formRef" class="login-form" size="large">
           <el-form-item prop="username">
-            <el-input 
-              v-model="form.username" 
-              placeholder="请输入用户名" 
-              class="custom-input"
-            />
+            <el-input v-model="form.username" placeholder="请输入用户名" class="custom-input" />
           </el-form-item>
           <el-form-item prop="phone">
-            <el-input 
-              v-model="form.phone" 
-              placeholder="请输入手机号"
-              class="custom-input"
-            />
+            <el-input v-model="form.phone" placeholder="请输入11位手机号" class="custom-input" />
           </el-form-item>
-
-          <el-form-item label="注册为" prop="role">
-            <el-radio-group v-model="form.role" class="role-selector">
-              <el-radio-button label="USER">普通用户</el-radio-button>
-              <el-radio-button label="FARMER">我是茶农</el-radio-button>
+          <el-form-item prop="nickname">
+            <el-input v-model="form.nickname" placeholder="请输入昵称（可选）" class="custom-input" />
+          </el-form-item>
+          <el-form-item prop="role" class="role-selector">
+            <el-radio-group v-model="form.role">
+              <el-radio-button value="USER">普通用户</el-radio-button>
+              <el-radio-button value="FARMER">我是茶农</el-radio-button>
             </el-radio-group>
           </el-form-item>
-
           <el-form-item prop="password">
-            <el-input 
-              v-model="form.password" 
-              type="password" 
-              placeholder="请输入密码" 
-              show-password
-              class="custom-input"
-            />
+            <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password class="custom-input" />
           </el-form-item>
           <el-form-item prop="confirmPassword">
-            <el-input 
-              v-model="form.confirmPassword" 
-              type="password" 
-              placeholder="请再次输入密码" 
+            <el-input
+              v-model="form.confirmPassword"
+              type="password"
+              placeholder="请再次输入密码"
               show-password
               class="custom-input"
             />
           </el-form-item>
-          
+
           <el-form-item>
-            <el-button type="primary" class="login-btn" @click="handleRegister" :loading="loading">
-              立即注册
-            </el-button>
+            <el-button type="primary" class="login-btn" @click="handleRegister" :loading="loading">立即注册</el-button>
           </el-form-item>
-          
+
           <div class="form-footer">
             <div class="login-link">
               已有账号？
@@ -63,7 +48,7 @@
             </div>
           </div>
         </el-form>
-        
+
         <div class="footer-tip">
           <div class="divider"></div>
           <p class="slogan">地道恩施利川红 · 直连农户与消费者</p>
@@ -76,7 +61,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '../api/auth'
+import { register } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -86,16 +71,17 @@ const loading = ref(false)
 const form = reactive({
   username: '',
   phone: '',
+  nickname: '',
   password: '',
   confirmPassword: '',
-  role: 'USER' // Default role
+  role: 'USER'
 })
 
 const validatePass2 = (rule, value, callback) => {
   if (value === '') {
     callback(new Error('请再次输入密码'))
   } else if (value !== form.password) {
-    callback(new Error('两次输入密码不一致!'))
+    callback(new Error('两次输入密码不一致'))
   } else {
     callback()
   }
@@ -104,46 +90,40 @@ const validatePass2 = (rule, value, callback) => {
 const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
   ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
+    { pattern: /^\d{11}$/, message: '请输入11位数字手机号', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
   ],
-  confirmPassword: [
-    { validator: validatePass2, trigger: 'blur' }
-  ]
+  confirmPassword: [{ required: true, validator: validatePass2, trigger: 'blur' }]
 }
 
 const handleRegister = () => {
   if (!formRef.value) return
   formRef.value.validate(async (valid) => {
-    if (valid) {
-      loading.value = true
-      try {
-        const { confirmPassword, ...registerData } = form
-        await register(registerData)
-        ElMessage.success('注册成功，即将跳转登录')
-        setTimeout(() => {
-          router.push('/login')
-        }, 3000)
-      } catch (e) {
-        // error handled by interceptor
-      } finally {
-        loading.value = false
-      }
-    } else {
-      return false
+    if (!valid) return
+
+    loading.value = true
+    try {
+      const { confirmPassword, ...registerData } = form
+      await register(registerData)
+      ElMessage.success('注册成功，即将跳转登录')
+      setTimeout(() => {
+        router.push('/login')
+      }, 1000)
+    } finally {
+      loading.value = false
     }
   })
 }
 </script>
 
 <style scoped>
-/* Styles remain unchanged */
 .login-container {
   position: relative;
   display: flex;
@@ -159,12 +139,9 @@ const handleRegister = () => {
 
 .login-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4); /* 暗化背景 */
-  backdrop-filter: blur(3px); /* 轻微模糊 */
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
   z-index: 1;
 }
 
@@ -175,7 +152,7 @@ const handleRegister = () => {
 }
 
 .login-card {
-  width: 450px; /* 略宽于登录卡片以容纳更多字段 */
+  width: 450px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 12px;
   border: none;
@@ -193,12 +170,12 @@ const handleRegister = () => {
   font-size: 26px;
   color: #333;
   margin: 0 0 10px 0;
-  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-weight: 600;
 }
 
 .subtitle {
-  color: #8B4513;
+  color: #8b4513;
   font-size: 14px;
   letter-spacing: 2px;
   margin: 0;
@@ -216,7 +193,7 @@ const handleRegister = () => {
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #D2691E inset !important;
+  box-shadow: 0 0 0 1px #d2691e inset !important;
 }
 
 .login-btn {
@@ -226,7 +203,7 @@ const handleRegister = () => {
   font-size: 16px;
   font-weight: bold;
   letter-spacing: 4px;
-  background: linear-gradient(to right, #8B4513, #D2691E);
+  background: linear-gradient(to right, #8b4513, #d2691e);
   border: none;
   margin-top: 5px;
   transition: all 0.3s;
@@ -240,7 +217,7 @@ const handleRegister = () => {
 
 .form-footer {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   margin-top: 5px;
   font-size: 14px;
@@ -251,7 +228,7 @@ const handleRegister = () => {
 }
 
 .login-link a {
-  color: #D2691E;
+  color: #d2691e;
   text-decoration: none;
   font-weight: bold;
   margin-left: 5px;
@@ -273,22 +250,21 @@ const handleRegister = () => {
 }
 
 .slogan {
-  color: #8B4513;
+  color: #8b4513;
   font-size: 13px;
-  margin-bottom: 8px;
-  font-weight: bold;
+  letter-spacing: 1px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.role-selector :deep(.el-radio-group) {
+  width: 100%;
+  display: flex;
 }
 
-/* 响应式调整 */
-@media (max-width: 480px) {
-  .login-card {
-    width: 90%;
-    margin: 0 20px;
-  }
+.role-selector :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.role-selector :deep(.el-radio-button__inner) {
+  width: 100%;
 }
 </style>

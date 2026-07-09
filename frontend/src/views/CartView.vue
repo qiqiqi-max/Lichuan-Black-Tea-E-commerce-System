@@ -1,9 +1,11 @@
-<template>
+﻿<template>
   <div class="cart-container">
     <h2>购物车</h2>
     <el-table :data="cartStore.items" style="width: 100%">
       <el-table-column prop="name" label="商品" />
-      <el-table-column prop="price" label="单价" />
+      <el-table-column prop="price" label="单价">
+        <template #default="{ row }">¥{{ row.price }}</template>
+      </el-table-column>
       <el-table-column prop="quantity" label="数量" />
       <el-table-column label="操作">
         <template #default="scope">
@@ -12,7 +14,7 @@
       </el-table-column>
     </el-table>
     <div class="footer">
-      <span>总计: <span class="total">¥ {{ cartStore.totalAmount }}</span></span>
+      <span>总计：<span class="total">¥{{ cartStore.totalAmount }}</span></span>
       <el-button type="primary" @click="checkout" :disabled="cartStore.items.length === 0">去结算</el-button>
     </div>
   </div>
@@ -33,21 +35,19 @@ const router = useRouter()
 onMounted(async () => {
   if (userStore.token && userStore.user) {
     try {
-      const res = await api.get(`/cart?userId=${userStore.user.username}`)
-      // Sync backend cart to local store
-      // We should probably clear local and replace, or merge.
-      // For simplicity, let's replace.
+      const res = await api.get(`/cart?userId=${userStore.user.id}`)
       cartStore.clearCart()
       res.forEach(item => {
-        // Backend returns CartItemDTO.
-        // We need to map it to store format.
-        // Store expects: { id, name, price, coverImg, quantity }
-        cartStore.addToCart({
-            id: item.productId,
+        cartStore.addToCart(
+          {
+            productId: item.productId,
             name: item.productName,
+            spec: item.spec,
             price: item.price,
             coverImg: item.coverImg
-        }, item.quantity)
+          },
+          item.quantity
+        )
       })
     } catch (e) {
       console.error('Failed to sync cart', e)
@@ -56,18 +56,15 @@ onMounted(async () => {
 })
 
 const handleRemove = async (item) => {
-    try {
-        if (userStore.user) {
-             // Use POST with body to avoid URL encoding issues with special chars in product name
-             await api.post(`/cart/remove?userId=${userStore.user.username}`, {
-                 productName: item.name
-             })
-        }
-        cartStore.removeFromCart(item.name)
-        ElMessage.success('已移除')
-    } catch (e) {
-        ElMessage.error('移除失败')
+  try {
+    if (userStore.user && userStore.user.id) {
+      await api.delete(`/cart/remove?userId=${userStore.user.id}&productId=${item.productId}&spec=${item.spec}`)
     }
+    cartStore.removeFromCart(item)
+    ElMessage.success('已移除')
+  } catch (e) {
+    ElMessage.error('移除失败')
+  }
 }
 
 const checkout = async () => {
@@ -76,13 +73,13 @@ const checkout = async () => {
     router.push('/login')
     return
   }
-  
+
   const orderData = {
     userId: userStore.user.id,
     totalAmount: cartStore.totalAmount,
-    address: '默认收货地址', // Simplified
+    address: '默认收货地址',
     items: cartStore.items.map(i => ({
-      productId: i.id,
+      productId: i.productId,
       productName: i.name,
       price: i.price,
       quantity: i.quantity
@@ -95,7 +92,7 @@ const checkout = async () => {
     cartStore.clearCart()
     router.push('/orders')
   } catch (e) {
-    // handled
+    ElMessage.error(e.message || '下单失败')
   }
 }
 </script>
@@ -107,12 +104,14 @@ const checkout = async () => {
   padding: 20px;
   background: #fff;
 }
+
 .footer {
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .total {
   color: #f56c6c;
   font-size: 20px;

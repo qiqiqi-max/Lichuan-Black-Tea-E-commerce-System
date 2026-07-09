@@ -1,80 +1,208 @@
 package com.lichuan.tea.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.lichuan.tea.dto.PageResult;
+import com.lichuan.tea.entity.FarmerProfile;
+import com.lichuan.tea.entity.FlashSale;
 import com.lichuan.tea.entity.Product;
 import com.lichuan.tea.entity.User;
-import com.lichuan.tea.mapper.ProductMapper;
+import com.lichuan.tea.repository.FarmerProfileRepository;
+import com.lichuan.tea.repository.FlashSaleRepository;
+import com.lichuan.tea.repository.ProductRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
-public class ProductService extends ServiceImpl<ProductMapper, Product> {
+public class ProductService {
 
-    public List<Product> getApprovedProducts(String keyword) {
-        QueryWrapper<Product> wrapper = new QueryWrapper<>();
-        wrapper.eq("audit_status", "APPROVED");
-        if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like("name", keyword).or().like("description", keyword);
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private FarmerProfileRepository farmerProfileRepository;
+
+    @Autowired
+    private FlashSaleRepository flashSaleRepository;
+
+
+    // Public-facing product list: always platform-wide.
+    public List<Product> list(String search) {
+        if (search != null && !search.isEmpty()) {
+            return productRepository.search(search);
         }
-        return list(wrapper);
+        return productRepository.findAll();
     }
 
-    public List<Product> getProductsByFarmer(Long farmerId) {
-        return list(new QueryWrapper<Product>().eq("farmer_id", farmerId));
+    // Public-facing product search: always platform-wide.
+    public Page<Product> search(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+        if (keyword == null || keyword.isEmpty()) {
+            return productRepository.findAll(pageable);
+        }
+        return productRepository.searchPage(keyword, pageable);
     }
 
-    public Product createProduct(Product product, User currentUser) {
-        if (!"FARMER".equals(currentUser.getRole())) {
-            throw new RuntimeException("只有农户才能创建商品");
+    public PageResult<Product> getManagePage(
+            String name,
+            String origin,
+            String farmerName,
+            int pageNum,
+            int pageSize,
+            User currentUser) {
+
+        if (currentUser == null) {
+            throw new RuntimeException("Please login first");
         }
-        product.setAuditStatus("PENDING");
-        save(product);
+
+        if (pageNum < 1) {
+            pageNum = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 20;
+        }
+
+        Pageable pageable = PageRequest.of(pageNum - 1, pageSize, Sort.Direction.DESC, "id");
+        String trimmedName = trimToNull(name);
+        String trimmedOrigin = trimToNull(origin);
+        String trimmedFarmerName = trimToNull(farmerName);
+
+        Page<Product> page;
+        if ("FARMER".equals(currentUser.getRole())) {
+            Optional<FarmerProfile> farmerProfile = farmerProfileRepository.findByUserId(currentUser.getId());
+            if (farmerProfile.isEmpty()) {
+                return new PageResult<>(0, pageNum, pageSize, List.of());
+            }
+            page = productRepository.findManagePageByFarmerId(
+                    farmerProfile.get().getId(),
+                    trimmedName,
+                    trimmedOrigin,
+                    trimmedFarmerName,
+                    pageable
+            );
+        } else if ("ADMIN".equals(currentUser.getRole())) {
+            page = productRepository.findManagePage(trimmedName, trimmedOrigin, trimmedFarmerName, pageable);
+        } else {
+            throw new RuntimeException("Insufficient permission");
+        }
+
+        return new PageResult<>(page.getTotalElements(), pageNum, pageSize, page.getContent());
+    }
+
+    public Product getDetail(Long id) {
+        if (id == null) {
+            return null;
+        }
+        Long nonNullId = Objects.requireNonNull(id, "id");
+        Product product = productRepository.findById(nonNullId).orElse(null);
+        if (product == null) {
+            return null;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Optional<FlashSale> activeFlashSale = flashSaleRepository
+                .findFirstByProduct_IdAndEnabledTrueAndStartTimeLessThanEqualAndEndTimeGreaterThanOrderByStartTimeDescIdDesc(
+                        nonNullId, now, now
+                );
+        if (activeFlashSale.isPresent()) {
+            FlashSale flashSale = activeFlashSale.get();
+            product.setFlashSaleActive(true);
+            product.setFlashSalePrice(flashSale.getSeckillPrice());
+            product.setFlashSaleStartTime(flashSale.getStartTime());
+            product.setFlashSaleEndTime(flashSale.getEndTime());
+        } else {
+            product.setFlashSaleActive(false);
+            product.setFlashSalePrice(null);
+            product.setFlashSaleStartTime(null);
+            product.setFlashSaleEndTime(null);
+        }
         return product;
     }
 
-    public Product updateProduct(Long id, Product productDetails, User currentUser) {
-        Product existingProduct = getById(id);
-        if (existingProduct == null) {
-            throw new RuntimeException("商品不存在");
-        }
-
+    public Product create(Product product, User currentUser) {
+        ensureManagePermission(currentUser);
+        Product nonNullProduct = Objects.requireNonNull(product, "product");
         if ("FARMER".equals(currentUser.getRole())) {
-            // A better implementation would be to get farmerId from currentUser
-            if (!existingProduct.getFarmerId().equals(productDetails.getFarmerId())) {
-                throw new RuntimeException("无权修改他人商品");
-            }
-            // When a farmer updates a product, it should be re-audited
-            existingProduct.setAuditStatus("PENDING");
+            nonNullProduct.setFarmer(resolveFarmerProfile(currentUser));
         }
-        // Admins can update any product without re-audit unless they change the status explicitly.
-
-        // Update only the fields that are meant to be changed
-        existingProduct.setName(productDetails.getName());
-        existingProduct.setDescription(productDetails.getDescription());
-        existingProduct.setPrice(productDetails.getPrice());
-        existingProduct.setStock(productDetails.getStock());
-        existingProduct.setImage(productDetails.getImage());
-        existingProduct.setOrigin(productDetails.getOrigin());
-
-        updateById(existingProduct);
-        return existingProduct;
+        return productRepository.save(nonNullProduct);
     }
 
-    public void deleteProduct(Long id, User currentUser) {
-        Product existingProduct = getById(id);
-        if (existingProduct == null) {
-            throw new RuntimeException("商品不存在");
-        }
+    public Product update(Long id, Product request, User currentUser) {
+        ensureManagePermission(currentUser);
+        Long nonNullId = Objects.requireNonNull(id, "id");
+        Product nonNullRequest = Objects.requireNonNull(request, "request");
+        Product existing = productRepository.findById(nonNullId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
         if ("FARMER".equals(currentUser.getRole())) {
-            // This logic needs to be improved by getting farmerId from currentUser
-            if (!existingProduct.getFarmerId().equals(1L)) {
-                throw new RuntimeException("无权删除他人商品");
+            FarmerProfile farmerProfile = resolveFarmerProfile(currentUser);
+            if (existing.getFarmer() == null || !farmerProfile.getId().equals(existing.getFarmer().getId())) {
+                throw new RuntimeException("You can only edit your own products");
+            }
+            existing.setFarmer(farmerProfile);
+        }
+
+        existing.setName(nonNullRequest.getName());
+        existing.setDescription(nonNullRequest.getDescription());
+        existing.setStory(nonNullRequest.getStory());
+        existing.setPrice(nonNullRequest.getPrice());
+        existing.setStock(nonNullRequest.getStock());
+        if (nonNullRequest.getSales() != null) {
+            existing.setSales(nonNullRequest.getSales());
+        }
+        existing.setCoverImg(nonNullRequest.getCoverImg());
+        if (nonNullRequest.getCategory() != null) {
+            existing.setCategory(nonNullRequest.getCategory());
+        }
+        existing.setOrigin(nonNullRequest.getOrigin());
+
+        return productRepository.save(existing);
+    }
+
+    public void delete(Long id, User currentUser) {
+        ensureManagePermission(currentUser);
+        Long nonNullId = Objects.requireNonNull(id, "id");
+        Product existing = productRepository.findById(nonNullId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        if ("FARMER".equals(currentUser.getRole())) {
+            FarmerProfile farmerProfile = resolveFarmerProfile(currentUser);
+            if (existing.getFarmer() == null || !farmerProfile.getId().equals(existing.getFarmer().getId())) {
+                throw new RuntimeException("You can only delete your own products");
             }
         }
 
-        removeById(id);
+        productRepository.delete(Objects.requireNonNull(existing, "existing"));
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private FarmerProfile resolveFarmerProfile(User currentUser) {
+        return farmerProfileRepository.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("Farmer profile not found"));
+    }
+
+    private void ensureManagePermission(User currentUser) {
+        if (currentUser == null) {
+            throw new RuntimeException("Please login first");
+        }
+        if (!"ADMIN".equals(currentUser.getRole()) && !"FARMER".equals(currentUser.getRole())) {
+            throw new RuntimeException("Insufficient permission");
+        }
     }
 }

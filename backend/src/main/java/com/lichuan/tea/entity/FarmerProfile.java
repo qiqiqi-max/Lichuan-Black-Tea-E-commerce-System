@@ -1,24 +1,31 @@
 package com.lichuan.tea.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
-
-import java.time.LocalDateTime;
+import javax.persistence.*;
 
 @Data
-@TableName("farmer_profiles")
+@Entity
+@Table(name = "farmer_profiles")
 public class FarmerProfile {
-    @TableId(type = IdType.AUTO)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long userId;
-    private String farmName;
-    private String address;
-    private String idCardImg;
-    private String intro;
-    private String auditStatus;
-    private LocalDateTime auditTime;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user;
+
+    @Column(nullable = false)
+    private String realName;
+
+    private String address; // Add address field
+
+    @Column(nullable = false)
+    private String origin;
+
+    @Lob
+    private String story;
+
+    private String teaGardenUrl;
 }

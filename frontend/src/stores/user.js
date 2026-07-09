@@ -1,40 +1,28 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const USER_STORAGE_KEY = 'user'
+const TOKEN_STORAGE_KEY = 'token'
+
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('token') || '')
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
-  const farmerProfile = ref(JSON.parse(localStorage.getItem('farmerProfile') || 'null'))
+  const token = ref(sessionStorage.getItem(TOKEN_STORAGE_KEY) || '')
+  const user = ref(JSON.parse(sessionStorage.getItem(USER_STORAGE_KEY) || '{}'))
 
-  const isLoggedIn = computed(() => !!token.value && !!user.value)
-  const isFarmer = computed(() => isLoggedIn.value && user.value.role === 'FARMER')
-  const isAdmin = computed(() => isLoggedIn.value && user.value.role === 'ADMIN')
+  const role = computed(() => user.value?.role || '')
 
-  function setUser(userData, tokenValue, profileData) {
+  function login(userData, tokenValue) {
     user.value = userData
     token.value = tokenValue
-    localStorage.setItem('user', JSON.stringify(userData))
-    localStorage.setItem('token', tokenValue)
-
-    if (profileData) {
-      farmerProfile.value = profileData
-      localStorage.setItem('farmerProfile', JSON.stringify(profileData))
-    } else {
-      farmerProfile.value = null
-      localStorage.removeItem('farmerProfile')
-    }
+    sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData))
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, tokenValue)
   }
 
   function logout() {
-    user.value = null
+    user.value = {}
     token.value = ''
-    farmerProfile.value = null
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
-    localStorage.removeItem('farmerProfile')
-    // Optionally, redirect to login page
-    window.location.href = '/login'
+    sessionStorage.removeItem(USER_STORAGE_KEY)
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   }
 
-  return { user, token, farmerProfile, isLoggedIn, isFarmer, isAdmin, setUser, logout }
+  return { user, token, role, login, logout }
 })

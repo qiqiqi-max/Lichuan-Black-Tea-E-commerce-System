@@ -1,36 +1,30 @@
-<template>
+﻿<template>
   <div class="search-view">
     <div class="container">
-      <!-- Header -->
       <div class="search-header">
         <h2 class="search-title">搜索结果：<span class="highlight">"{{ searchStore.keyword }}"</span></h2>
         <span class="result-count">共找到 {{ searchStore.total }} 款相关好茶</span>
       </div>
 
-      <!-- Loading -->
       <div v-if="searchStore.loading" class="loading-state">
         <el-skeleton :rows="3" animated />
       </div>
 
-      <!-- Empty State -->
-      <el-empty v-else-if="!searchStore.results.length" description="暂无匹配茶叶，试试其他关键词？">
+      <el-empty v-else-if="!searchStore.results.length" description="暂无匹配商品，试试其他关键词">
         <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
       </el-empty>
 
-      <!-- Results Grid -->
       <div v-else class="product-grid">
         <div class="product-item" v-for="p in searchStore.results" :key="p.id" @click="$router.push('/product/' + p.id)">
           <div class="p-image">
-            <img :src="p.coverImg || '/images/products/product1.jpg'" loading="lazy" />
-            <div class="farmer-tag" v-if="p.farmerName">
-              产自{{ p.farmerName }}茶园
-            </div>
+            <img :src="p.coverImg || '/images/products/product1.jpg'" loading="lazy" @error="handleImageError" />
+            <div class="farmer-tag" v-if="p.farmerName">产自 {{ p.farmerName }} 茶园</div>
           </div>
           <div class="p-info">
             <h3 class="p-name">{{ p.name }}</h3>
             <div class="p-tags">
               <span class="tag-origin">{{ p.origin || '利川' }}</span>
-              <span class="tag-farmer" v-if="p.farmerName">{{ p.farmerName }}直供</span>
+              <span class="tag-farmer" v-if="p.farmerName">{{ p.farmerName }} 直供</span>
             </div>
             <div class="p-meta">
               <span class="p-price">¥{{ p.price }}</span>
@@ -40,7 +34,6 @@
         </div>
       </div>
 
-      <!-- Pagination -->
       <div class="pagination-wrapper" v-if="searchStore.total > 0">
         <el-pagination
           background
@@ -61,7 +54,7 @@ import { useSearchStore } from '../stores/search'
 import { useRoute, useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useUserStore } from '../stores/user'
-import api from '../api' // For addToCart if needed, but store handles it usually
+import api from '../api'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -71,7 +64,6 @@ const cartStore = useCartStore()
 const userStore = useUserStore()
 const currentPage = ref(1)
 
-// Initialize search from URL query
 onMounted(() => {
   const keyword = route.query.keyword
   if (keyword) {
@@ -79,13 +71,15 @@ onMounted(() => {
   }
 })
 
-// Watch for URL query changes (e.g. searching again from header)
-watch(() => route.query.keyword, (newKeyword) => {
-  if (newKeyword) {
-    currentPage.value = 1
-    searchStore.searchProducts(newKeyword, 1)
+watch(
+  () => route.query.keyword,
+  (newKeyword) => {
+    if (newKeyword) {
+      currentPage.value = 1
+      searchStore.searchProducts(newKeyword, 1)
+    }
   }
-})
+)
 
 const handlePageChange = (page) => {
   searchStore.searchProducts(searchStore.keyword, page)
@@ -102,23 +96,30 @@ const addToCart = async (product) => {
     router.push('/login')
     return
   }
+
   try {
-    await api.post(`/cart/add?userId=${userStore.user.username}`, {
-        productId: product.id,
-        productName: product.name,
-        price: product.price,
-        quantity: 1,
-        coverImg: product.coverImg
-    })
-    cartStore.addToCart({
-      id: product.id,
-      name: product.name,
+    await api.post(`/cart/add?userId=${userStore.user.id}`, {
+      productId: product.id,
+      productName: product.name,
       price: product.price,
+      quantity: 1,
       coverImg: product.coverImg
     })
+
+    cartStore.addToCart(
+      {
+        productId: product.id,
+        name: product.name,
+        spec: '默认',
+        price: product.price,
+        coverImg: product.coverImg
+      },
+      1
+    )
+
     ElMessage.success('已加入购物车')
   } catch (e) {
-    ElMessage.error('加入购物车失败')
+    ElMessage.error(e.message || '加入购物车失败')
   }
 }
 </script>
@@ -126,7 +127,7 @@ const addToCart = async (product) => {
 <style scoped>
 .search-view {
   padding: 40px 0;
-  background-color: #FFF8F0;
+  background-color: #fff8f0;
   min-height: 80vh;
 }
 
@@ -138,18 +139,18 @@ const addToCart = async (product) => {
 
 .search-header {
   margin-bottom: 30px;
-  border-bottom: 1px solid #E5DED1;
+  border-bottom: 1px solid #e5ded1;
   padding-bottom: 20px;
 }
 
 .search-title {
-  font-family: "Noto Serif SC", serif;
-  color: #5A4A42;
+  font-family: 'Noto Serif SC', serif;
+  color: #5a4a42;
   font-size: 24px;
 }
 
 .highlight {
-  color: #8B4513;
+  color: #8b4513;
 }
 
 .result-count {
@@ -158,7 +159,6 @@ const addToCart = async (product) => {
   margin-left: 10px;
 }
 
-/* Product Grid (Consistent with Home) */
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -185,14 +185,17 @@ const addToCart = async (product) => {
 }
 
 .p-image img {
-  width: 100%; height: 100%; object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .farmer-tag {
   position: absolute;
-  top: 10px; left: 10px;
-  background: rgba(255,255,255,0.9);
-  color: #8B4513;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #8b4513;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 20px;
@@ -213,8 +216,17 @@ const addToCart = async (product) => {
   font-size: 12px;
 }
 
-.tag-origin { color: #999; margin-right: 10px; }
-.tag-farmer { color: #8B4513; background: #FFF0E0; padding: 2px 6px; border-radius: 4px; }
+.tag-origin {
+  color: #999;
+  margin-right: 10px;
+}
+
+.tag-farmer {
+  color: #8b4513;
+  background: #fff0e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
 
 .p-meta {
   display: flex;
@@ -222,10 +234,14 @@ const addToCart = async (product) => {
   align-items: center;
 }
 
-.p-price { font-size: 18px; color: #D35400; font-weight: 700; }
+.p-price {
+  font-size: 18px;
+  color: #d35400;
+  font-weight: 700;
+}
 
 .add-btn {
-  background: #8B4513;
+  background: #8b4513;
   color: #fff;
   border: none;
   padding: 6px 16px;
@@ -235,7 +251,9 @@ const addToCart = async (product) => {
   transition: background 0.2s;
 }
 
-.add-btn:hover { background: #A0522D; }
+.add-btn:hover {
+  background: #a0522d;
+}
 
 .pagination-wrapper {
   margin-top: 50px;
