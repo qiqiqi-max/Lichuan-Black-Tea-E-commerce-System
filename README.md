@@ -1,238 +1,231 @@
-# 利川红茶助农平台（Lichuan Tea Platform）
+# 利川红茶电商系统
 
-基于 `Spring Boot 2.7 + Vue 3` 的前后端分离电商平台，聚焦“茶农直供、真实可溯源、助农有温度”。
+![项目横幅](frontend/public/images/banner/banner1.jpg)
 
-- 文档版本：`v0.6`
-- 最后更新：`2026-05-17`
+一个基于 `Spring Boot 2.7 + Vue 3` 的前后端分离电商系统，围绕湖北利川红茶的线上展示、交易、订单履约、售后管理和茶农故事运营搭建。项目既包含普通用户的商城购买链路，也包含管理员后台的商品、订单、用户、营销内容管理，适合作为毕业设计、课程设计或全栈项目展示。
 
-## 1. 当前项目状态（以代码实况为准）
+[![Java](https://img.shields.io/badge/Java-11-orange)](#技术栈)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-brightgreen)](#技术栈)
+[![Vue](https://img.shields.io/badge/Vue-3-42b883)](#技术栈)
+[![Vite](https://img.shields.io/badge/Vite-5-646cff)](#技术栈)
+[![MySQL](https://img.shields.io/badge/MySQL-8-blue)](#环境要求)
 
-### 1.1 已落地能力
-- 用户与权限：注册、登录、角色区分（`USER` / `FARMER` / `ADMIN`）
-- 商城链路：商品列表、商品搜索、商品详情、加购、下单、模拟支付
-- 订单链路：我的订单、后台订单管理、农户订单发货
-- 售后链路：用户发起售后、后台审核、状态流转
-- 运营模块：特别推荐、限时秒杀（后台配置 + 前台展示）
-- 内容模块：茶农故事（列表、详情、后台管理）
-- 仪表盘：管理员与茶农双视角统计
-- 系统启动时自动补齐 `admin` / `user` / `farmer` 账号，并自动初始化样例商品、茶农故事
-- 文件能力：商品图/故事图上传、读取、缺图回退与修复
+## 项目亮点
 
-### 1.2 最近稳定性改动
-- 首页“全部茶品”按接口完整返回展示，不再固定截断 8 条
-- 首页商品卡片支持快捷“加入购物车”
-- 农户“订单发货”查询改为“按订单明细中是否包含本人商品”反查
-- 商品图与故事图支持多目录兼容读取 + fallback 图片，显著降低 404
-- 商品详情页对无效商品 ID 增加兜底提示与返回入口
+- 完整商城流程：商品浏览、搜索、详情、购物车、下单、模拟支付、订单查看。
+- 多角色后台：支持 `USER`、`FARMER`、`ADMIN` 三类角色，后台菜单与数据按角色区分。
+- 运营内容管理：支持限时秒杀、特别推荐、茶农故事等内容的后台维护和前台展示。
+- 售后业务闭环：用户可提交售后申请，后台可审核、处理并更新状态。
+- 文件上传能力：商品图片、茶农故事图片支持上传、访问和缺图修复脚本。
+- 可演示数据：后端启动后自动补齐默认账号、样例商品和茶农故事，方便快速展示。
 
-## 2. 技术栈与环境
+## 功能总览
 
-- 前端：`Vue 3`、`Vite 5`、`Element Plus`、`Pinia`、`Pinia Persistedstate`、`Vue Router`、`Axios`、`ECharts`
-- 后端：`Spring Boot 2.7.18`、`Spring Data JPA`、`MySQL 8`、`Redis`（已接入配置，业务可继续扩展）
-- 推荐环境：`JDK 11+`、`Maven 3.9+`、`Node.js 18+`
+### 前台商城
 
-## 3. 快速启动
+- 首页：轮播图、限时秒杀、特别推荐、全部茶品、茶农故事。
+- 商品列表与搜索：支持关键词搜索、分页展示和商品详情查看。
+- 商品详情：展示价格、库存、产地、茶农、故事文案，可加入购物车或立即购买。
+- 购物车：支持添加商品、修改数量、删除商品、清空购物车和提交订单。
+- 我的订单：支持查看订单、模拟支付、申请售后和查看售后进度。
+- 用户认证：支持登录、注册和基于角色的页面跳转。
 
-### 3.1 启动后端（dev）
+### 后台管理
+
+- 数据看板：展示用户、商品、订单、销售额等核心统计信息。
+- 商品管理：支持分页查询、新增、编辑、删除、图片上传和库存维护。
+- 订单管理：管理员可查看全部订单，茶农可查看包含自己商品的订单并发货。
+- 售后管理：支持退款、退货退款、换货等申请的审核与状态流转。
+- 营销管理：支持特别推荐和限时秒杀活动配置。
+- 茶农故事管理：支持故事内容、图片、排序和启用状态维护。
+- 用户管理：支持用户分页、新增、编辑、删除和角色维护。
+
+## 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| 前端 | Vue 3、Vite 5、Element Plus、Pinia、Vue Router、Axios、ECharts、Sass |
+| 后端 | Spring Boot 2.7.18、Spring Web、Spring Data JPA、Lombok |
+| 数据库 | MySQL 8 |
+| 缓存/扩展 | Redis 配置已接入，当前业务保留扩展空间 |
+| 构建工具 | Maven、npm |
+
+## 架构概览
+
+```mermaid
+flowchart LR
+    U["用户 / 茶农 / 管理员"] --> F["Vue 3 前端"]
+    F -->|Axios / REST API| B["Spring Boot 后端"]
+    B --> S["Service 业务层"]
+    S --> R["Spring Data JPA Repository"]
+    R --> DB["MySQL 数据库"]
+    B --> UP["本地上传目录 uploads"]
+    B -. 可扩展 .-> Redis["Redis"]
+```
+
+## 目录结构
+
+```text
+.
+├── backend
+│   ├── src/main/java/com/lichuan/tea
+│   │   ├── controller      # REST 接口
+│   │   ├── service         # 业务逻辑
+│   │   ├── repository      # JPA 数据访问
+│   │   ├── entity          # 数据实体
+│   │   ├── dto             # 请求/响应对象
+│   │   ├── config          # 跨域、Redis 等配置
+│   │   └── common          # 统一响应结构
+│   ├── src/main/resources  # application 配置
+│   ├── scripts             # 启动与图片修复脚本
+│   └── uploads             # 商品图、茶农故事图
+├── frontend
+│   ├── public/images       # 前端静态图片资源
+│   └── src
+│       ├── api             # Axios 请求封装
+│       ├── components      # 公共组件
+│       ├── router          # 前端路由
+│       ├── stores          # Pinia 状态
+│       └── views           # 页面视图
+├── init.sql                # 数据库初始化脚本
+└── README.md
+```
+
+## 环境要求
+
+- JDK 11+
+- Maven 3.8+
+- Node.js 18+
+- MySQL 8+
+- Redis 可选，当前主要业务不依赖 Redis 缓存
+
+默认开发数据库配置位于 `backend/src/main/resources/application-dev.yml`：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/lichuan_tea_db
+    username: root
+    password: 123456
+```
+
+## 快速启动
+
+### 1. 克隆项目
 
 ```bash
+git clone https://github.com/qiqiqi-max/Lichuan-Black-Tea-E-commerce-System.git
+cd Lichuan-Black-Tea-E-commerce-System
+```
+
+### 2. 准备数据库
+
+先在 MySQL 中创建数据库：
+
+```sql
+CREATE DATABASE IF NOT EXISTS lichuan_tea_db
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+项目使用 JPA `ddl-auto: update`，启动后会自动创建/更新表结构。也可以按需参考 `init.sql` 初始化基础数据。
+
+### 3. 启动后端
+
+推荐使用项目脚本：
+
+```powershell
 cd backend
 powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1 -KillPortOwner
 ```
 
-备用：
+也可以直接使用 Maven：
 
 ```bash
 cd backend
 mvn spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=dev"
 ```
 
-默认后端配置：
-- 服务端口：`8080`
-- 数据库：`jdbc:mysql://localhost:3306/lichuan_tea_db`
-- 用户名：`root`
-- 密码：`123456`
+后端默认地址：
 
-### 3.2 启动前端
+```text
+http://localhost:8080
+```
+
+### 4. 启动前端
 
 ```bash
 cd frontend
 npm install
-npm run dev -- --host 0.0.0.0 --port 5173
+npm run dev
 ```
 
-默认访问：
-- 前端：`http://localhost:5173`
-- 后端：`http://localhost:8080`
-
-说明：`5173` 被占用时，Vite 会自动切换到 `5174+`。
-
-## 4. 默认测试账号
-
-系统启动时自动补齐（缺失则创建）：
-- 管理员：`admin / 123456`
-- 普通用户：`user / 123456`
-- 茶农：`farmer / 123456`
-
-## 5. 功能模块（当前实现）
-
-### 5.1 前台商城
-- 首页：限时秒杀、特别推荐、全部茶品、茶农故事（均为动态接口数据）
-- 商品详情：秒杀价展示、倒计时、加购、立即购买
-- 搜索页：关键词分页搜索
-- 购物车：增删改数量、提交下单
-- 订单页：查看订单、模拟支付、申请售后、查看售后进度
-- 茶农故事详情：`/farmer-story/:id`
-
-### 5.2 后台管理
-- 仪表盘：管理员/茶农双口径统计
-- 商品管理：筛选、分页、新增/编辑/删除、图片上传
-- 订单管理：管理员看全量；茶农看“包含本人商品”的订单并发货
-- 售后管理：审核、处理中、完成等流转
-- 特别推荐管理（ADMIN）
-- 限时秒杀管理（ADMIN）
-- 茶农故事管理（ADMIN）
-- 用户管理（ADMIN）
-
-## 6. 接口摘要（按当前代码）
-
-### 6.1 认证
-- `POST /api/login`
-- `POST /api/register`
-
-### 6.2 商品
-- `GET /api/products`
-- `GET /api/products/search`
-- `GET /api/products/{id}`
-- `GET /api/products/manage-page`
-- `POST /api/products`
-- `PUT /api/products/{id}`
-- `DELETE /api/products/{id}`
-- `POST /api/products/upload-image`
-- `GET /api/products/image/{fileName}`
-
-### 6.3 订单
-- `POST /api/orders`
-- `GET /api/orders`
-- `GET /api/orders/my`
-- `GET /api/orders/list`
-- `POST /api/orders/{id}/pay`
-- `PUT /api/orders/{id}/ship`
-- `PUT /api/orders/{id}`
-- `GET /api/admin/orders`
-
-### 6.4 购物车（使用 `userId` 查询参数）
-- `POST /api/cart/add`
-- `DELETE /api/cart/remove`
-- `GET /api/cart`
-- `DELETE /api/cart/clear`
-
-### 6.5 售后
-- `POST /api/after-sales`
-- `GET /api/after-sales/my`
-- `GET /api/after-sales/manage`
-- `GET /api/after-sales/manage-page`
-- `PUT /api/after-sales/{id}/review`
-- `PUT /api/after-sales/{id}/status`
-
-### 6.6 运营与内容
-- `GET /api/special-recommendations/active`
-- `GET /api/special-recommendations/manage`
-- `GET /api/special-recommendations/manage-page`
-- `POST /api/special-recommendations`
-- `PUT /api/special-recommendations/{id}`
-- `DELETE /api/special-recommendations/{id}`
-- `GET /api/flash-sales/active`
-- `GET /api/flash-sales/manage`
-- `GET /api/flash-sales/manage-page`
-- `POST /api/flash-sales`
-- `PUT /api/flash-sales/{id}`
-- `DELETE /api/flash-sales/{id}`
-- `GET /api/farmer-stories/active`
-- `GET /api/farmer-stories/{id}`
-- `GET /api/farmer-stories/manage-page`
-- `POST /api/farmer-stories`
-- `PUT /api/farmer-stories/{id}`
-- `PUT /api/farmer-stories/{id}/status`
-- `DELETE /api/farmer-stories/{id}`
-- `POST /api/farmer-stories/upload-image`
-- `GET /api/farmer-stories/image/{fileName}`
-
-### 6.7 后台统计与用户
-- `GET /api/admin/dashboard/stats`
-- `GET /api/admin/users`
-- `GET /api/admin/users/page`
-- `POST /api/admin/users`
-- `PUT /api/admin/users/{id}`
-- `DELETE /api/admin/users/{id}`
-
-## 7. 项目结构
+前端默认地址：
 
 ```text
-backend/
-  src/main/java/com/lichuan/tea/
-    controller/
-    service/
-    repository/
-    entity/
-    dto/
-    config/
-    common/
-  src/main/resources/
-    application.yml
-    application-dev.yml
-    application-prod.yml
-  uploads/
-    product-images/
-    farmer-stories/
-  scripts/
-    start-dev.ps1
-    repair-missing-product-images.ps1
-    repair-missing-farmer-story-images.ps1
-
-frontend/
-  src/
-    api/
-    router/
-    stores/
-    views/
-    views/admin/
-    components/
+http://localhost:5173
 ```
 
-## 8. 运维脚本
+## 默认账号
 
-目录：`backend/scripts`
+系统启动时会自动补齐以下演示账号：
 
-- 一键启动开发后端并可自动释放端口：
+| 角色 | 用户名 | 密码 | 用途 |
+| --- | --- | --- | --- |
+| 管理员 | `admin` | `123456` | 访问后台全部管理功能 |
+| 普通用户 | `user` | `123456` | 浏览商品、下单、申请售后 |
+| 茶农 | `farmer` | `123456` | 查看相关订单并发货 |
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\start-dev.ps1 -KillPortOwner
+## 核心接口
+
+| 模块 | 接口示例 |
+| --- | --- |
+| 认证 | `POST /api/login`、`POST /api/register` |
+| 商品 | `GET /api/products`、`GET /api/products/search`、`POST /api/products/upload-image` |
+| 购物车 | `POST /api/cart/add`、`GET /api/cart`、`DELETE /api/cart/remove` |
+| 订单 | `POST /api/orders`、`GET /api/orders/my`、`POST /api/orders/{id}/pay` |
+| 售后 | `POST /api/after-sales`、`GET /api/after-sales/manage-page`、`PUT /api/after-sales/{id}/review` |
+| 营销 | `GET /api/flash-sales/active`、`GET /api/special-recommendations/active` |
+| 茶农故事 | `GET /api/farmer-stories/active`、`POST /api/farmer-stories/upload-image` |
+| 后台统计 | `GET /api/admin/dashboard/stats` |
+| 用户管理 | `GET /api/admin/users/page`、`POST /api/admin/users`、`PUT /api/admin/users/{id}` |
+
+## 构建验证
+
+后端打包：
+
+```bash
+cd backend
+mvn -q -DskipTests package
 ```
 
-- 修复商品缺图（先 dry-run，再 `-Apply`）：
+前端构建：
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\repair-missing-product-images.ps1
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\repair-missing-product-images.ps1 -Apply
+```bash
+cd frontend
+npm run build
 ```
 
-- 修复茶农故事缺图（先 dry-run，再 `-Apply`）：
+当前版本已通过后端打包和前端生产构建验证。前端构建时可能出现 Vite chunk 体积提示，不影响功能运行。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\repair-missing-farmer-story-images.ps1
-powershell -ExecutionPolicy Bypass -File .\backend\scripts\repair-missing-farmer-story-images.ps1 -Apply
-```
+## 项目展示重点
 
-## 9. 当前验证结果（2026-03-25）
+如果你是第一次查看这个项目，可以重点看这些部分：
 
-- 后端：`mvn -q -DskipTests compile` 通过
-- 前端：`npm run build` 通过（存在 Vite 大包体积告警，功能不受影响）
+- `frontend/src/views/HomeView.vue`：商城首页与营销内容展示。
+- `frontend/src/views/admin`：后台管理页面。
+- `backend/src/main/java/com/lichuan/tea/controller`：后端接口入口。
+- `backend/src/main/java/com/lichuan/tea/service`：订单、售后、商品、营销等业务逻辑。
+- `backend/src/main/java/com/lichuan/tea/DataInitializer.java`：演示数据自动初始化。
 
-## 10. 已知技术债
+## 后续可扩展方向
 
-- 认证授权仍为简化方案：`mock-token + X-User-Id`，未接入 JWT/Spring Security
-- 密码目前明文存储，需升级 `BCrypt`
-- CORS 当前为宽松策略，生产环境需白名单收敛
-- 全局异常处理与错误码规范化仍需完善
-- 自动化测试覆盖不足（后端单测、前端 E2E）
+- 接入 Spring Security 和 JWT，替换当前演示用 `mock-token`。
+- 对密码使用 BCrypt 加密存储。
+- 增加单元测试、接口测试和前端 E2E 测试。
+- 将上传图片迁移到对象存储，增强生产环境部署能力。
+- 对后台统计增加更多经营分析指标。
+
+## 项目说明
+
+本项目用于学习、展示和毕业设计场景，重点展示一个完整电商系统从前台购买到后台运营管理的核心流程。生产环境使用前需要补充更严格的鉴权、密码加密、权限校验、异常处理和安全配置。
