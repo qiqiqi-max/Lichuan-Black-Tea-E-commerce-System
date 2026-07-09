@@ -1,6 +1,6 @@
 # 利川红茶电商系统
 
-![项目横幅](frontend/public/images/banner/banner1.jpg)
+![利川红茶电商系统首页](docs/images/home.png)
 
 一个基于 `Spring Boot 2.7 + Vue 3` 的前后端分离电商系统，围绕湖北利川红茶的线上展示、交易、订单履约、售后管理和茶农故事运营搭建。项目既包含普通用户的商城购买链路，也包含管理员后台的商品、订单、用户、营销内容管理，适合作为毕业设计、课程设计或全栈项目展示。
 
@@ -9,6 +9,44 @@
 [![Vue](https://img.shields.io/badge/Vue-3-42b883)](#技术栈)
 [![Vite](https://img.shields.io/badge/Vite-5-646cff)](#技术栈)
 [![MySQL](https://img.shields.io/badge/MySQL-8-blue)](#环境要求)
+
+## 项目截图
+
+以下截图来自项目真实页面，展示数据为演示数据，适合公开仓库首页快速了解系统效果。
+
+### 商城首页
+
+首页聚合茶园品牌首屏、价值卖点、限时秒杀、特别推荐、全部茶品和茶农故事，突出“利川红茶 + 助农直供”的项目主题。
+
+![商城首页首屏](docs/images/home.png)
+
+![商城商品与营销展示](docs/images/home-products.png)
+
+### 商品详情
+
+商品详情页展示商品图片、价格、库存、产地、茶农信息、规格选择、加入购物车和立即购买入口。
+
+![商品详情页](docs/images/product-detail.png)
+
+### 登录认证
+
+登录页使用茶园背景图，支持普通用户、茶农和管理员登录，根据角色进入不同页面。
+
+![登录页面](docs/images/login.png)
+
+### 管理后台
+
+后台提供数据看板、商品管理、订单管理、售后处理、特别推荐、限时秒杀、茶农故事和用户管理等功能。
+
+![后台数据看板](docs/images/admin-dashboard.png)
+
+![后台商品管理](docs/images/admin-products.png)
+
+![后台订单管理](docs/images/admin-orders.png)
+
+![后台售后管理](docs/images/admin-after-sales.png)
+
+![限时秒杀活动管理](docs/images/admin-flash-sales.png)
 
 ## 项目亮点
 
